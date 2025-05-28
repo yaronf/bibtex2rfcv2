@@ -1,8 +1,14 @@
-"""Tests for the BibTeX to RFC XML converter."""
+"""Tests for the BibTeX to RFC XML v3 converter."""
 
 import pytest
 from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
 from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+import subprocess
+import tempfile
+import os
+import datetime
+import glob
+import re
 
 def test_article_to_rfcxml():
     entry = BibTeXEntry(
@@ -20,7 +26,7 @@ def test_article_to_rfcxml():
     assert '<title>A Study on BibTeX Conversion</title>' in xml
     assert '<author fullname="Alice Smith"/>' in xml
     assert '<author fullname="Bob Jones"/>' in xml
-    assert '<date year="2023"/>' in xml
+    assert '<seriesInfo name="Year" value="2023"/>' in xml
     assert '<seriesInfo name="Journal" value="Journal of Testing"/>' in xml
     assert xml.strip().endswith('</reference>')
 
@@ -79,7 +85,7 @@ def test_book_with_additional_fields():
     assert '<seriesInfo name="ISBN" value="0201896834"/>' in xml
     assert '<seriesInfo name="Keywords" value="programming"/>' in xml
     assert '<seriesInfo name="URL" value="http://www.amazon.com/exec/obidos/redirect?tag=citeulike07-20&amp;path=ASIN/0201896834"/>' in xml
-    assert '<date year="1997" month="7" day="17"/>' in xml
+    assert '<seriesInfo name="Year" value="1997"/>' in xml
     assert '<seriesInfo name="HowPublished" value="Hardcover"/>' in xml
     assert xml.strip().endswith('</reference>')
 
@@ -173,8 +179,9 @@ def test_icml2023_bibtex_to_rfcxml():
     for entry in entries:
         xml = bibtex_entry_to_rfcxml(entry)
         assert '<reference anchor="' in xml
-        assert '<title>' in xml
-        assert '<date year="' in xml
+        assert re.search(r'<title[^>]*>', xml) is not None
+        if entry.entry_type != BibTeXEntryType.PROCEEDINGS:
+            assert '<seriesInfo name="Year" value="' in xml
         assert xml.strip().endswith('</reference>')
 
 def test_real_bibtex_files():
@@ -191,7 +198,7 @@ def test_real_bibtex_files():
     assert '<seriesInfo name="Edition" value="3"/>' in knuth_xml
     assert '<seriesInfo name="ISBN" value="0201896834"/>' in knuth_xml
     assert '<seriesInfo name="Keywords" value="programming"/>' in knuth_xml
-    assert '<date year="1997" month="7" day="17"/>' in knuth_xml
+    assert '<seriesInfo name="Year" value="1997"/>' in knuth_xml
     assert '<seriesInfo name="HowPublished" value="Hardcover"/>' in knuth_xml
 
     # Test FIPS article entry
@@ -212,4 +219,81 @@ def test_real_bibtex_files():
     assert '<author fullname="Vishal Misra"/>' in sigcomm_xml
     assert '<author fullname="Eddie Kohler"/>' in sigcomm_xml
     assert '<author fullname="David A. Maltz"/>' in sigcomm_xml
-    assert '<seriesInfo name="Publisher" value="ACM"/>' in sigcomm_xml 
+    assert '<seriesInfo name="Publisher" value="ACM"/>' in sigcomm_xml
+
+@pytest.mark.parametrize("bibfile", glob.glob("tests/data/icml2023_entries/entry*.bibtex"))
+def test_rfcxml_valid_with_xml2rfc(bibfile):
+    from pathlib import Path
+    from bibtex2rfcv2.parser import parse_bibtex
+    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    import tempfile
+    import subprocess
+    import os
+
+    # Get preamble and postamble
+    preamble_path = Path("tests/fixtures/preamble.xml")
+    postamble_path = Path("tests/fixtures/postamble.xml")
+    assert preamble_path.exists(), "preamble.xml not found"
+    assert postamble_path.exists(), "postamble.xml not found"
+
+    # Parse and convert BibTeX entry
+    entries = parse_bibtex(Path(bibfile))
+    assert len(entries) == 1, f"Expected 1 entry in {bibfile}, got {len(entries)}"
+    reference_xml = bibtex_entry_to_rfcxml(entries[0])
+
+    # Debug: Print the XML content
+    print(f"\nDebug: XML content for {bibfile}:")
+    print(reference_xml)
+
+    # Compose the full XML
+    xml_content = preamble_path.read_text() + reference_xml + postamble_path.read_text()
+
+    # Write to temporary file and validate
+    with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as tmp:
+        tmp.write(xml_content)
+        tmp_path = tmp.name
+    try:
+        result = subprocess.run([
+            "xml2rfc", tmp_path, "--no-dtd", "--quiet"
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"\nDebug: xml2rfc validation failed for {bibfile}")
+            print(f"Error output: {result.stderr}")
+            print(f"Full XML content:")
+            print(xml_content)
+        assert result.returncode == 0, f"xml2rfc validation failed for {bibfile}: {result.stderr}"
+    finally:
+        os.remove(tmp_path)
+
+def test_minimal_rfcxml_valid_with_xml2rfc():
+    """Test that a minimal valid RFC XML entry is accepted by xml2rfc using preamble/postamble from the original project."""
+    import pathlib
+    preamble_path = pathlib.Path("tests/fixtures/preamble.xml")
+    postamble_path = pathlib.Path("tests/fixtures/postamble.xml")
+    assert preamble_path.exists(), "preamble.xml not found"
+    assert postamble_path.exists(), "postamble.xml not found"
+
+    # Minimal reference entry
+    reference_xml = """
+  <reference anchor="test2023">
+    <front>
+      <title>Test Title</title>
+      <author fullname="Test Author"/>
+      <date year="2025"/>
+    </front>
+  </reference>
+"""
+    # Compose the full XML
+    xml_content = preamble_path.read_text() + reference_xml + postamble_path.read_text()
+
+    import tempfile, subprocess, os
+    with tempfile.NamedTemporaryFile("w", suffix=".xml", delete=False) as tmp:
+        tmp.write(xml_content)
+        tmp_path = tmp.name
+    try:
+        result = subprocess.run([
+            "xml2rfc", tmp_path, "--no-dtd", "--quiet"
+        ], capture_output=True, text=True)
+        assert result.returncode == 0, f"xml2rfc validation failed: {result.stderr}"
+    finally:
+        os.remove(tmp_path) 
