@@ -28,6 +28,8 @@ def bibtex_entry_to_rfcxml(entry: BibTeXEntry) -> str:
             # Treat newlines as whitespace and split on ' and '
             editors_clean = " ".join(editors.split())
             authors = [a.strip() for a in editors_clean.split(" and ") if a.strip()]
+    
+    # Generate just the reference content
     xml = [f'<reference anchor="{escape(entry.key)}">']
     xml.append(f'  <front>')
     xml.append(f'    <title>{escape(title)}</title>')
@@ -120,5 +122,5 @@ def bibtex_entry_to_rfcxml(entry: BibTeXEntry) -> str:
             xml.append(f'  <seriesInfo name="Publisher" value="{escape(publisher)}"/>')
         # Editors are already handled as authors above if present
 
-    xml.append(f'</reference>')
-    return "\n".join(xml) 
+    xml.append('</reference>')
+    return '\n'.join(xml) 
