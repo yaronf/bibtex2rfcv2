@@ -74,11 +74,30 @@ class BibTeXEntry:
         self.validate()
 
     def validate(self) -> None:
-        """Validate the entry's required fields.
+        """Validate the entry's required fields and field formats.
 
         Raises:
-            ValueError: If required fields are missing.
+            ValueError: If required fields are missing or if fields have invalid formats.
         """
+        # Check for invalid fields
+        valid_fields = {
+            "author", "title", "journal", "year", "month", "day", "publisher", "editor",
+            "volume", "number", "pages", "booktitle", "institution", "school", "abstract",
+            "note", "url", "doi", "isbn", "issn", "lccn", "mrnumber", "zblnumber",
+            "howpublished", "date-modified", "posted-at", "archive", "archiveprefix",
+            "arxivid", "pubmedid", "pmcid", "keywords", "timestamp"
+        }
+        invalid_fields = set(self.fields.keys()) - valid_fields
+        if invalid_fields:
+            raise ValueError(f"Invalid fields: {', '.join(invalid_fields)}")
+
+        # Validate field formats
+        if "year" in self.fields:
+            year = self.fields["year"]
+            if not year.isdigit() or len(year) != 4:
+                raise ValueError(f"Invalid year format: {year}")
+
+        # Check for missing required fields
         required = REQUIRED_FIELDS.get(self.entry_type, set())
         missing = required - set(self.fields.keys())
         if missing:
@@ -117,5 +136,5 @@ class BibTeXEntry:
         """
         if "author" not in self.fields:
             return []
-        # Split authors by "and" and strip whitespace
+        # Split authors by " and " and strip whitespace
         return [author.strip() for author in self.fields["author"].split(" and ")] 
