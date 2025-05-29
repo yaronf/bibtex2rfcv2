@@ -9,6 +9,7 @@ import os
 import datetime
 import glob
 import re
+import xml.etree.ElementTree as ET
 
 def test_article_to_rfcxml():
     entry = BibTeXEntry(
@@ -296,4 +297,208 @@ def test_minimal_rfcxml_valid_with_xml2rfc():
         ], capture_output=True, text=True)
         assert result.returncode == 0, f"xml2rfc validation failed: {result.stderr}"
     finally:
-        os.remove(tmp_path) 
+        os.remove(tmp_path)
+
+def test_accented_characters():
+    """Test conversion of BibTeX entries with accented characters."""
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="accented2023",
+        fields={
+            "author": "Jos{\\'e} Su{\\'a}rez{-}Varela and Andr{\\'e} L{\\\"u}t{\\\"u}",
+            "title": "Enhancing 5G Radio Planning with Graph Representations",
+            "journal": "Journal of Testing",
+            "year": "2023",
+        },
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert re.search(r'<author fullname="José Suárez-Varela"[^>]*/>', xml)
+    assert re.search(r'<author fullname="André Lütü"[^>]*/>', xml)
+    assert '<title>Enhancing 5G Radio Planning with Graph Representations</title>' in xml
+    assert xml.strip().endswith('</reference>')
+
+def test_latex_to_unicode():
+    from bibtex2rfcv2.utils import latex_to_unicode
+
+    # Test cases for various LaTeX accents
+    assert latex_to_unicode("{\\'e}") == "é"
+    assert latex_to_unicode("{\\'a}") == "á"
+    assert latex_to_unicode("{\\'i}") == "í"
+    assert latex_to_unicode("{\\'o}") == "ó"
+    assert latex_to_unicode("{\\'u}") == "ú"
+    assert latex_to_unicode("{\\'y}") == "ý"
+    assert latex_to_unicode("{\\'A}") == "Á"
+    assert latex_to_unicode("{\\'E}") == "É"
+    assert latex_to_unicode("{\\'I}") == "Í"
+    assert latex_to_unicode("{\\'O}") == "Ó"
+    assert latex_to_unicode("{\\'U}") == "Ú"
+    assert latex_to_unicode("{\\'Y}") == "Ý"
+
+    # Test cases for other accents
+    assert latex_to_unicode("{\\`a}") == "à"
+    assert latex_to_unicode("{\\`e}") == "è"
+    assert latex_to_unicode("{\\`i}") == "ì"
+    assert latex_to_unicode("{\\`o}") == "ò"
+    assert latex_to_unicode("{\\`u}") == "ù"
+    assert latex_to_unicode("{\\`A}") == "À"
+    assert latex_to_unicode("{\\`E}") == "È"
+    assert latex_to_unicode("{\\`I}") == "Ì"
+    assert latex_to_unicode("{\\`O}") == "Ò"
+    assert latex_to_unicode("{\\`U}") == "Ù"
+
+    # Test cases for umlauts
+    assert latex_to_unicode("{\\\"a}") == "ä"
+    assert latex_to_unicode("{\\\"e}") == "ë"
+    assert latex_to_unicode("{\\\"i}") == "ï"
+    assert latex_to_unicode("{\\\"o}") == "ö"
+    assert latex_to_unicode("{\\\"u}") == "ü"
+    assert latex_to_unicode("{\\\"y}") == "ÿ"
+    assert latex_to_unicode("{\\\"A}") == "Ä"
+    assert latex_to_unicode("{\\\"E}") == "Ë"
+    assert latex_to_unicode("{\\\"I}") == "Ï"
+    assert latex_to_unicode("{\\\"O}") == "Ö"
+    assert latex_to_unicode("{\\\"U}") == "Ü"
+    assert latex_to_unicode("{\\\"Y}") == "Ÿ"
+
+    # Test cases for circumflex
+    assert latex_to_unicode("{\\^a}") == "â"
+    assert latex_to_unicode("{\\^e}") == "ê"
+    assert latex_to_unicode("{\\^i}") == "î"
+    assert latex_to_unicode("{\\^o}") == "ô"
+    assert latex_to_unicode("{\\^u}") == "û"
+    assert latex_to_unicode("{\\^A}") == "Â"
+    assert latex_to_unicode("{\\^E}") == "Ê"
+    assert latex_to_unicode("{\\^I}") == "Î"
+    assert latex_to_unicode("{\\^O}") == "Ô"
+    assert latex_to_unicode("{\\^U}") == "Û"
+
+    # Test cases for tilde
+    assert latex_to_unicode("{\\~a}") == "ã"
+    assert latex_to_unicode("{\\~n}") == "ñ"
+    assert latex_to_unicode("{\\~o}") == "õ"
+    assert latex_to_unicode("{\\~A}") == "Ã"
+    assert latex_to_unicode("{\\~N}") == "Ñ"
+    assert latex_to_unicode("{\\~O}") == "Õ"
+
+    # Test cases for cedilla
+    assert latex_to_unicode("{\\c{c}}") == "ç"
+    assert latex_to_unicode("{\\c{C}}") == "Ç"
+
+    # Test cases for caron
+    assert latex_to_unicode("{\\v{s}}") == "š"
+    assert latex_to_unicode("{\\v{S}}") == "Š"
+    assert latex_to_unicode("{\\v{z}}") == "ž"
+    assert latex_to_unicode("{\\v{Z}}") == "Ž"
+    assert latex_to_unicode("{\\v{c}}") == "č"
+    assert latex_to_unicode("{\\v{C}}") == "Č"
+
+    # Test cases for breve
+    assert latex_to_unicode("{\\u{g}}") == "ğ"
+    assert latex_to_unicode("{\\u{G}}") == "Ğ"
+
+    # Test cases for dot
+    assert latex_to_unicode("{\\.I}") == "İ"
+
+    # Test cases for direct form
+    assert latex_to_unicode("\\'e") == "é"
+    assert latex_to_unicode("\\'a") == "á"
+    assert latex_to_unicode("\\'i") == "í"
+    assert latex_to_unicode("\\'o") == "ó"
+    assert latex_to_unicode("\\'u") == "ú"
+    assert latex_to_unicode("\\'y") == "ý"
+    assert latex_to_unicode("\\'A") == "Á"
+    assert latex_to_unicode("\\'E") == "É"
+    assert latex_to_unicode("\\'I") == "Í"
+    assert latex_to_unicode("\\'O") == "Ó"
+    assert latex_to_unicode("\\'U") == "Ú"
+    assert latex_to_unicode("\\'Y") == "Ý"
+
+    # Test cases for mixed accents
+    assert latex_to_unicode("Jos{\\'e} Su{\\'a}rez{-}Varela and Andr{\\'e} L{\\\"u}t{\\\"u}") == "José Suárez-Varela and André Lütü"
+
+def test_utf8_validation():
+    import tempfile
+    import xml.etree.ElementTree as ET
+    from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
+    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+
+    # 1 & 2: Non-ASCII and non-Latin characters
+    entries = [
+        BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key="chinese2023",
+            fields={
+                "author": "李四 and 张三",
+                "title": "深度学习的进展",
+                "journal": "人工智能学报",
+                "year": "2023",
+            },
+        ),
+        BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key="cyrillic2023",
+            fields={
+                "author": "Алексей Иванов",
+                "title": "Обработка данных",
+                "journal": "Журнал Тестирования",
+                "year": "2023",
+            },
+        ),
+        BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key="emoji2023",
+            fields={
+                "author": "Alice 😀 and Bob 🚀",
+                "title": "Emoji in Science 🧪",
+                "journal": "Journal of Fun",
+                "year": "2023",
+            },
+        ),
+        # 7: Bidirectional text (Arabic, Hebrew)
+        BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key="arabic2023",
+            fields={
+                "author": "محمد علي",
+                "title": "تقدم التعلم العميق",
+                "journal": "مجلة الذكاء الاصطناعي",
+                "year": "2023",
+            },
+        ),
+        BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key="hebrew2023",
+            fields={
+                "author": "דוד לוי",
+                "title": "התקדמות בלמידה עמוקה",
+                "journal": "כתב עת לבינה מלאכותית",
+                "year": "2023",
+            },
+        ),
+    ]
+
+    for entry in entries:
+        # Round-trip encoding/decoding
+        with tempfile.NamedTemporaryFile("w+", encoding="utf-8", delete=False) as tmp:
+            tmp.write(entry.fields["author"] + "\n" + entry.fields["title"])
+            tmp.seek(0)
+            content = tmp.read()
+            assert entry.fields["author"] in content
+            assert entry.fields["title"] in content
+
+        # Convert to XML
+        xml = bibtex_entry_to_rfcxml(entry)
+        # 5: XML escaping and validity
+        # Should not contain unescaped <, >, or & in text nodes
+        assert "<author" in xml
+        assert "<title" in xml
+        assert "&lt;" not in xml and "&gt;" not in xml and "&amp;" not in xml or all(c not in entry.fields["title"] for c in "<>&")
+        # Parse XML to ensure validity
+        try:
+            ET.fromstring("<root>" + xml + "</root>")
+        except ET.ParseError as e:
+            assert False, f"XML not valid for entry {entry.key}: {e}"
+        # 7: Check that right-to-left scripts are present
+        if entry.key in ("arabic2023", "hebrew2023"):
+            assert entry.fields["author"] in xml
+            assert entry.fields["title"] in xml 
