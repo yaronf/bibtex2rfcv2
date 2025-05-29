@@ -2,6 +2,7 @@
 
 import sys
 from typing import Optional
+import os
 
 import click
 from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
@@ -24,6 +25,10 @@ def main() -> None:
 def convert(input_file: str, output_file: str) -> None:
     """Convert a BibTeX file to RFC XML format."""
     try:
+        # Check if the input file is readable
+        if not os.access(input_file, os.R_OK):
+            click.echo(f'Error: Permission denied: {input_file} is not readable.', err=True)
+            sys.exit(1)
         entries = parse_bibtex(Path(input_file))
         with open(output_file, 'w') as f:
             for entry in entries:
