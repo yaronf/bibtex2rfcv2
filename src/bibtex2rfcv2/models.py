@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Set
+from bibtex2rfcv2.error_handling import InvalidInputError
 
 
 class BibTeXEntryType(str, Enum):
@@ -77,7 +78,7 @@ class BibTeXEntry:
         """Validate the entry's required fields and field formats.
 
         Raises:
-            ValueError: If required fields are missing or if fields have invalid formats.
+            InvalidInputError: If required fields are missing or if fields have invalid formats.
         """
         # Check for invalid fields
         valid_fields = {
@@ -85,23 +86,29 @@ class BibTeXEntry:
             "volume", "number", "pages", "booktitle", "institution", "school", "abstract",
             "note", "url", "doi", "isbn", "issn", "lccn", "mrnumber", "zblnumber",
             "howpublished", "date-modified", "posted-at", "archive", "archiveprefix",
-            "arxivid", "pubmedid", "pmcid", "keywords", "timestamp"
+            "arxivid", "pubmedid", "pmcid", "keywords", "timestamp", "series", "edition",
+            "address", "organization", "chapter", "type", "language", "location", "annote",
+            "crossref", "key", "mendeley-tags", "priority", "citeulike-article-id", "citeulike-linkout-0",
+            "citeulike-linkout-1", "citeulike-linkout-2", "citeulike-linkout-3", "citeulike-linkout-4",
+            "citeulike-linkout-5", "citeulike-linkout-6", "citeulike-linkout-7", "citeulike-linkout-8",
+            "citeulike-linkout-9", "citeulike-linkout-10", "biburl", "added-by", "interhash",
+            "added-at", "intrahash"
         }
         invalid_fields = set(self.fields.keys()) - valid_fields
         if invalid_fields:
-            raise ValueError(f"Invalid fields: {', '.join(invalid_fields)}")
+            raise InvalidInputError(f"Invalid fields: {', '.join(invalid_fields)}")
 
         # Validate field formats
         if "year" in self.fields:
             year = self.fields["year"]
             if not year.isdigit() or len(year) != 4:
-                raise ValueError(f"Invalid year format: {year}")
+                raise InvalidInputError(f"Invalid year format: {year}")
 
         # Check for missing required fields
         required = REQUIRED_FIELDS.get(self.entry_type, set())
         missing = required - set(self.fields.keys())
         if missing:
-            raise ValueError(
+            raise InvalidInputError(
                 f"Missing required fields for {self.entry_type}: {', '.join(missing)}"
             )
 
@@ -115,7 +122,11 @@ class BibTeXEntry:
         Returns:
             The field value or the default if not present.
         """
-        return self.fields.get(field_name, default)
+        value = self.fields.get(field_name, default)
+        if value is not None:
+            # Remove curly braces from the value
+            value = value.replace("{", "").replace("}", "")
+        return value
 
     def has_field(self, field_name: str) -> bool:
         """Check if the entry has a specific field.
@@ -136,5 +147,6 @@ class BibTeXEntry:
         """
         if "author" not in self.fields:
             return []
-        # Split authors by " and " and strip whitespace
-        return [author.strip() for author in self.fields["author"].split(" and ")] 
+        # Normalize whitespace and split authors by " and "
+        author_field = self.fields["author"].replace("\n", " ")
+        return [author.strip() for author in author_field.split(" and ")] 

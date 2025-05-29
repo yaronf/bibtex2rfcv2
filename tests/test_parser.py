@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from bibtex2rfcv2.parser import parse_bibtex
+from bibtex2rfcv2.error_handling import InvalidInputError
 
 
 def test_parse_bibtex_file(sample_bibtex_file: Path) -> None:
@@ -43,5 +44,5 @@ def test_parse_invalid_file(tmp_path: Path) -> None:
     """Test parsing an invalid BibTeX file."""
     invalid_file = tmp_path / "invalid.bibtex"
     invalid_file.write_text("This is not BibTeX")
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidInputError):
         parse_bibtex(invalid_file) 

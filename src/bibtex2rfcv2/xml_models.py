@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Set
 from xml.sax.saxutils import escape
+from bibtex2rfcv2.utils import latex_to_unicode
 
 
 class ReferenceStatus(str, Enum):
@@ -32,9 +33,28 @@ class Author:
     ascii_surname: Optional[str] = None
     ascii_organization: Optional[str] = None
 
+    def __init__(self, fullname: str, initials: Optional[str] = None, surname: Optional[str] = None,
+                 organization: Optional[str] = None, role: Optional[str] = None, email: Optional[str] = None,
+                 uri: Optional[str] = None, ascii_fullname: Optional[str] = None, ascii_initials: Optional[str] = None,
+                 ascii_surname: Optional[str] = None):
+        self.fullname = fullname
+        self.initials = initials
+        self.surname = surname
+        self.organization = organization
+        self.role = role
+        self.email = email
+        self.uri = uri
+        self._ascii_fullname = ascii_fullname
+        self._ascii_initials = ascii_initials
+        self._ascii_surname = ascii_surname
+
     def to_xml(self) -> str:
         """Convert author to XML."""
-        attrs = [f'fullname="{escape(self.fullname)}"']
+        # Convert LaTeX accents to Unicode and clean up the name
+        unicode_name = latex_to_unicode(self.fullname)
+        clean_name = unicode_name.strip().replace("\n", " ").replace("{", "").replace("}", "").replace("\\", "")
+        # Build attributes for this author
+        attrs = [f'fullname="{escape(clean_name)}"']
         if self.initials:
             attrs.append(f'initials="{escape(self.initials)}"')
         if self.surname:
@@ -47,14 +67,14 @@ class Author:
             attrs.append(f'email="{escape(self.email)}"')
         if self.uri:
             attrs.append(f'uri="{escape(self.uri)}"')
-        if self.ascii_fullname:
-            attrs.append(f'asciiFullname="{escape(self.ascii_fullname)}"')
-        if self.ascii_initials:
-            attrs.append(f'asciiInitials="{escape(self.ascii_initials)}"')
-        if self.ascii_surname:
-            attrs.append(f'asciiSurname="{escape(self.ascii_surname)}"')
-        if self.ascii_organization:
-            attrs.append(f'asciiOrganization="{escape(self.ascii_organization)}"')
+        # Add ASCII variants if they exist
+        if self._ascii_fullname:
+            attrs.append(f'asciiFullname="{escape(self._ascii_fullname)}"')
+        if self._ascii_initials:
+            attrs.append(f'asciiInitials="{escape(self._ascii_initials)}"')
+        if self._ascii_surname:
+            attrs.append(f'asciiSurname="{escape(self._ascii_surname)}"')
+        # Create the author tag with proper XML escaping
         return f'<author {" ".join(attrs)}/>'
 
 
@@ -92,9 +112,12 @@ class SeriesInfo:
 
     def to_xml(self) -> str:
         """Convert series info to XML."""
+        # Convert name and value to Unicode
+        unicode_name = latex_to_unicode(self.name)
+        unicode_value = latex_to_unicode(self.value)
         attrs = [
-            f'name="{escape(self.name)}"',
-            f'value="{escape(self.value)}"',
+            f'name="{escape(unicode_name)}"',
+            f'value="{escape(unicode_value)}"',
         ]
         if self.ascii_name:
             attrs.append(f'asciiName="{escape(self.ascii_name)}"')
@@ -168,7 +191,10 @@ class Front:
         attrs = []
         if self.ascii_title:
             attrs.append(f'asciiTitle="{escape(self.ascii_title)}"')
-        xml.append(f'  <title{" " + " ".join(attrs) if attrs else ""}>{escape(self.title)}</title>')
+        # Convert title to Unicode
+        unicode_title = latex_to_unicode(self.title)
+        xml.append(f'  <title{" " + " ".join(attrs) if attrs else ""}>{escape(unicode_title)}</title>')
+        # Output each author as-is
         for author in self.authors:
             xml.append(f'  {author.to_xml()}')
         if self.date:
@@ -177,12 +203,16 @@ class Front:
             attrs = []
             if self.ascii_abstract:
                 attrs.append(f'asciiAbstract="{escape(self.ascii_abstract)}"')
-            xml.append(f'  <abstract{" " + " ".join(attrs) if attrs else ""}>{escape(self.abstract)}</abstract>')
+            # Convert abstract to Unicode
+            unicode_abstract = latex_to_unicode(self.abstract)
+            xml.append(f'  <abstract{" " + " ".join(attrs) if attrs else ""}>{escape(unicode_abstract)}</abstract>')
         if self.note:
             attrs = []
             if self.ascii_note:
                 attrs.append(f'asciiNote="{escape(self.ascii_note)}"')
-            xml.append(f'  <note{" " + " ".join(attrs) if attrs else ""}>{escape(self.note)}</note>')
+            # Convert note to Unicode
+            unicode_note = latex_to_unicode(self.note)
+            xml.append(f'  <note{" " + " ".join(attrs) if attrs else ""}>{escape(unicode_note)}</note>')
         xml.append('</front>')
         return '\n'.join(xml)
 

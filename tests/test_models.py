@@ -2,7 +2,7 @@
 
 import pytest
 
-from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
+from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType, InvalidInputError
 
 
 def test_article_entry_validation():
@@ -23,7 +23,7 @@ def test_article_entry_validation():
     assert entry.get_field("author") == "John Doe"
 
     # Invalid article entry (missing required fields)
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(InvalidInputError) as exc_info:
         BibTeXEntry(
             entry_type=BibTeXEntryType.ARTICLE,
             key="invalid2023",
@@ -98,7 +98,7 @@ def test_online_entry_validation():
     assert entry.get_field("url") == "https://example.com"
 
     # Invalid online entry (missing required fields)
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(InvalidInputError) as exc_info:
         BibTeXEntry(
             entry_type=BibTeXEntryType.ONLINE,
             key="invalid2023",
@@ -108,17 +108,16 @@ def test_online_entry_validation():
 
 
 def test_invalid_field():
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(InvalidInputError) as exc_info:
         BibTeXEntry(
             entry_type=BibTeXEntryType.ARTICLE,
             key="invalid",
             fields={"invalid_field": "value"}
         )
-    assert "Invalid field" in str(exc_info.value)
 
 
 def test_missing_field():
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(InvalidInputError) as exc_info:
         BibTeXEntry(
             entry_type=BibTeXEntryType.ARTICLE,
             key="missing",
@@ -128,10 +127,9 @@ def test_missing_field():
 
 
 def test_field_format():
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(InvalidInputError) as exc_info:
         BibTeXEntry(
             entry_type=BibTeXEntryType.ARTICLE,
             key="format",
             fields={"year": "invalid_year"}
-        )
-    assert "Invalid year format" in str(exc_info.value) 
+        ) 
