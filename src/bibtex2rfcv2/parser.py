@@ -27,11 +27,14 @@ def parse_bibtex(source: Union[str, Path]) -> List[BibTeXEntry]:
     if isinstance(source, (str, Path)):
         if isinstance(source, Path):
             try:
+                print(f"Reading file: {source}")  # Debugging statement
                 content = source.read_text()
+                print(f"Content read: {content}")  # Debugging statement
             except Exception as e:
                 raise FileNotFoundError(f"Could not read file: {source}") from e
         else:
             content = source
+            print(f"Parsing content from string: {content}")  # Debugging statement
         try:
             entries = bibtexparser.loads(content, parser=parser)
         except Exception as e:
