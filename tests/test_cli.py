@@ -108,4 +108,43 @@ def test_file_permissions():
         with mock.patch('os.access', return_value=False):
             result = runner.invoke(main, ['convert', 'tests/data/minimal.bibtex', 'output.xml'])
             assert result.exit_code != 0
-            assert "Invalid value for 'INPUT_FILE'" in result.output 
+            assert "Permission denied" in result.output
+
+
+# New test for stdin support
+def test_stdin_stdout():
+    runner = CliRunner()
+    minimal_bibtex = '@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}'
+    result = runner.invoke(main, ['convert', '-', '-'], input=minimal_bibtex)
+    assert result.exit_code == 0
+    assert '<author fullname="John Doe"' in result.output
+    assert '<title>Test Title</title>' in result.output
+
+
+# New test for stdin with file output
+def test_stdin_file_output():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        minimal_bibtex = '@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}'
+        result = runner.invoke(main, ['convert', '-', 'output.xml'], input=minimal_bibtex)
+        assert result.exit_code == 0
+        assert 'Conversion completed. Output written to output.xml.' in result.output
+        with open('output.xml') as f:
+            xml_content = f.read()
+        assert '<author fullname="John Doe"' in xml_content
+        assert '<title>Test Title</title>' in xml_content
+
+
+# New test for file input with stdout
+def test_file_input_stdout():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        # Create a minimal valid BibTeX file
+        os.makedirs('tests/data', exist_ok=True)
+        minimal_bibtex = '@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}'
+        with open('tests/data/minimal.bibtex', 'w') as f:
+            f.write(minimal_bibtex)
+        result = runner.invoke(main, ['convert', 'tests/data/minimal.bibtex', '-'])
+        assert result.exit_code == 0
+        assert '<author fullname="John Doe"' in result.output
+        assert '<title>Test Title</title>' in result.output 

@@ -2,18 +2,19 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Union, TextIO
 
 import bibtexparser
 from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
 from bibtex2rfcv2.error_handling import InvalidInputError, FileNotFoundError
 
 
-def parse_bibtex(source: Union[str, Path]) -> List[BibTeXEntry]:
-    """Parse BibTeX content from a file or string.
+def parse_bibtex(source: Union[str, Path, TextIO]) -> List[BibTeXEntry]:
+    """Parse BibTeX content from a file, string, or file-like object.
 
     Args:
-        source: Either a path to a BibTeX file or a string containing BibTeX content.
+        source: Either a path to a BibTeX file, a string containing BibTeX content,
+               or a file-like object (like stdin).
 
     Returns:
         A list of BibTeXEntry objects.
@@ -35,17 +36,23 @@ def parse_bibtex(source: Union[str, Path]) -> List[BibTeXEntry]:
         else:
             content = source
             print(f"Parsing content from string: {content}")  # Debugging statement
-        try:
-            entries = bibtexparser.loads(content, parser=parser)
-        except Exception as e:
-            raise InvalidInputError(f"Failed to parse BibTeX: {e}") from e
+    elif hasattr(source, 'read'):
+        # Handle file-like objects (like stdin)
+        content = source.read()
     else:
-        raise InvalidInputError("source must be a string or Path")
+        raise InvalidInputError("source must be a string, Path, or file-like object")
+
+    try:
+        entries = bibtexparser.loads(content, parser=parser)
+    except Exception as e:
+        raise InvalidInputError(f"Failed to parse BibTeX: {e}") from e
+
     # Check if we got any entries
     if not entries.entries:
         if content and content.strip():
             raise InvalidInputError("No valid BibTeX entries found in input")
         return []
+
     result = []
     for entry in entries.entries:
         result.append(
