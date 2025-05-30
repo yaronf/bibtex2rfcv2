@@ -109,7 +109,7 @@ class BibTeXEntry:
         missing = required - set(self.fields.keys())
         if missing:
             raise InvalidInputError(
-                f"Missing required fields for {self.entry_type}: {', '.join(missing)}"
+                f"Missing required fields for {self.entry_type.value}: {', '.join(missing)}"
             )
 
     def get_field(self, field_name: str, default: Optional[str] = None) -> Optional[str]:
