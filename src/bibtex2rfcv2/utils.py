@@ -59,7 +59,7 @@ def latex_to_unicode(text: str) -> str:
     text = re.sub(r'\{\\v\{([a-zA-Z])\}\}', lambda m: accent_map['v'].get(m.group(1), m.group(0)), text)
     text = re.sub(r'\{\\u\{([a-zA-Z])\}\}', lambda m: accent_map['u'].get(m.group(1), m.group(0)), text)
     text = re.sub(r'\{\\\.([a-zA-Z])\}', lambda m: accent_map['.'].get(m.group(1), m.group(0)), text)
-    text = re.sub(r'\{\\(["' + "'`^~" + '])([a-zA-Z])\}', lambda m: accent_map[m.group(1)].get(m.group(2), m.group(0)), text)
+    text = re.sub(r'\{\\(["' + "'`^~" + '])([a-zA-Z])\\}', lambda m: accent_map[m.group(1)].get(m.group(2), m.group(0)), text)
 
     # Direct form: \'e
     text = re.sub(r'\\(["\'`^~cvu.])([a-zA-Z])', replace_accented, text)
