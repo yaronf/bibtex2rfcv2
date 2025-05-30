@@ -157,32 +157,20 @@ The plan follows the PRD's implementation phases and test-driven development met
     - Test: Performance test coverage
     - Test: Error handling test coverage
 
-26. Optimize performance
-    - Test: Processing speed tests
-    - Test: Memory usage tests
-    - Test: Load tests
-    - Test: Stress tests
-
-27. Implement security measures
-    - Test: Input validation
-    - Test: File handling security
-    - Test: Permission handling
-    - Test: Security audit
-
-28. Create comprehensive documentation
+26. Create comprehensive documentation
     - Test: API documentation
     - Test: CLI documentation
     - Test: Example files
     - Test: Troubleshooting guide
 
-29. Final review and cleanup
+27. Final review and cleanup
     - Test: Code quality check
     - Test: Documentation review
     - Test: Performance verification
     - Test: Security verification
 
 ## Phase 5: Additional Output Formats
-30. Add Markdown (kdrfc) output format support
+28. Add Markdown (kdrfc) output format support
     - Test: Markdown conversion tests
     - Test: Format validation tests
     - Test: Special character handling in Markdown
@@ -190,7 +178,7 @@ The plan follows the PRD's implementation phases and test-driven development met
     - Test: CLI option for format selection
 
 ## Phase 6: Package Distribution
-31. Prepare package for PyPI distribution
+29. Prepare package for PyPI distribution
     - Test: Package build process
     - Test: Installation from PyPI
     - Test: Dependencies resolution
