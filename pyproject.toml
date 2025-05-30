@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "wheel", "setuptools"]
 build-backend = "hatchling.build"
 
 [project]
@@ -27,6 +27,9 @@ dev = [
     "mypy>=1.0.0",
     "isort>=5.0.0",
     "flake8>=6.0.0",
+    "build>=1.0.0",
+    "wheel>=0.40.0",
+    "setuptools>=65.0.0",
 ]
 
 [project.scripts]
@@ -35,10 +38,10 @@ bibtex2rfcv2 = "bibtex2rfcv2.cli:main"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=bibtex2rfcv2"
+addopts = "-v --cov=src"
 
 [tool.coverage.run]
-source = ["bibtex2rfcv2"]
+source = ["src"]
 omit = ["tests/*"]
 
 [tool.coverage.report]
