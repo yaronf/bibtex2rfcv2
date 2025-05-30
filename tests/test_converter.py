@@ -622,4 +622,101 @@ def test_special_fields():
     )
     xml = bibtex_entry_to_rfcxml(entry)
     assert "<format type=\"TXT\" target=\"http://example.com\"" in xml
-    assert "<format type=\"DOI\" target=\"https://doi.org/10.1234/example\"" in xml 
+    assert "<format type=\"DOI\" target=\"https://doi.org/10.1234/example\"" in xml
+
+def test_extract_ascii_empty():
+    """Test extract_ascii with empty text."""
+    from bibtex2rfcv2.converter import extract_ascii
+    assert extract_ascii("") is None
+    assert extract_ascii(None) is None
+
+def test_editor_only_entry():
+    """Test conversion of an entry with only editors (no authors)."""
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.INCOLLECTION,
+        key="edited2023",
+        fields={
+            "author": "Test Author",  # Required field
+            "editor": "John Smith and Jane Doe",
+            "title": "Edited Collection",
+            "booktitle": "Test Booktitle",  # Required field
+            "publisher": "Test Press",
+            "year": "2023",
+        },
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert '<author fullname="Test Author"/>' in xml
+    assert '<title>Edited Collection</title>' in xml
+    assert '<seriesInfo name="Booktitle" value="Test Booktitle"/>' in xml
+
+def test_entry_with_abstract_and_note():
+    """Test conversion of an entry with abstract and note."""
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="abstract2023",
+        fields={
+            "author": "Test Author",
+            "title": "Test Title",
+            "journal": "Test Journal",
+            "year": "2023",
+            "abstract": "This is a test abstract with special chars: é, ü",
+            "note": "This is a test note with special chars: é, ü",
+        },
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert '<abstract asciiAbstract=' in xml
+    assert '<note asciiNote=' in xml
+    assert 'This is a test abstract with special chars: é, ü' in xml
+    assert 'This is a test note with special chars: é, ü' in xml
+
+def test_thesis_entries():
+    """Test conversion of thesis entries."""
+    # Test master's thesis
+    master_entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.MASTERSTHESIS,
+        key="master2023",
+        fields={
+            "author": "Test Author",
+            "title": "Master's Thesis",
+            "school": "Test University",
+            "year": "2023",
+        },
+    )
+    master_xml = bibtex_entry_to_rfcxml(master_entry)
+    assert '<seriesInfo name="School" value="Test University"/>' in master_xml
+
+    # Test PhD thesis
+    phd_entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.PHDTHESIS,
+        key="phd2023",
+        fields={
+            "author": "Test Author",
+            "title": "PhD Thesis",
+            "school": "Test University",
+            "year": "2023",
+        },
+    )
+    phd_xml = bibtex_entry_to_rfcxml(phd_entry)
+    assert '<seriesInfo name="School" value="Test University"/>' in phd_xml
+
+def test_conversion_error(monkeypatch):
+    """Test error handling during conversion."""
+    from bibtex2rfcv2.error_handling import ConversionError
+    import pytest
+    # Monkeypatch extract_ascii to raise ConversionError
+    from bibtex2rfcv2 import converter
+    def raise_error(*args, **kwargs):
+        raise ConversionError("Forced error for testing")
+    monkeypatch.setattr(converter, "extract_ascii", raise_error)
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="error2023",
+        fields={
+            "author": "Test Author",
+            "title": "Test Title",
+            "journal": "Test Journal",
+            "year": "2023",
+        },
+    )
+    with pytest.raises(ConversionError):
+        bibtex_entry_to_rfcxml(entry) 
