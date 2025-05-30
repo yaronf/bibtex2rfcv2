@@ -17,6 +17,7 @@ dependencies = [
     "lxml>=4.9.0",
     "click>=8.0.0",
     "tqdm>=4.65.0",
+    "xml2rfc>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +35,9 @@ dev = [
 
 [project.scripts]
 bibtex2rfcv2 = "bibtex2rfcv2.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bibtex2rfcv2"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
