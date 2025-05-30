@@ -33,16 +33,15 @@ def test_article_to_rfcxml():
     assert xml.strip().endswith('</reference>')
 
 def test_missing_required_fields():
-    with pytest.raises(InvalidInputError) as exc_info:
+    """Test error handling for missing required fields."""
+    with pytest.raises(InvalidInputError, match="Missing required fields for article"):
         BibTeXEntry(
+            key="invalid",
             entry_type=BibTeXEntryType.ARTICLE,
-            key="missingfields",
             fields={
-                "author": "Alice Smith",
-                # Missing title and year
-            },
+                "year": "2023"
+            }
         )
-    assert "Missing required fields" in str(exc_info.value)
 
 def test_book_to_rfcxml():
     entry = BibTeXEntry(
@@ -543,4 +542,84 @@ def test_error_handling():
         # Simulate a conversion failure
         raise ConversionError("Simulated conversion failure")
 
-    # Test logging (optional: check log output) 
+    # Test logging (optional: check log output)
+
+def test_article_entry():
+    """Test conversion of a minimal ARTICLE entry."""
+    entry = BibTeXEntry(
+        key="test",
+        entry_type=BibTeXEntryType.ARTICLE,
+        fields={
+            "author": "John Doe",
+            "title": "Test Title",
+            "year": "2023",
+            "journal": "Test Journal"
+        }
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert "<reference anchor=\"test\">" in xml
+    assert "<author fullname=\"John Doe\"" in xml
+    assert "<title>Test Title</title>" in xml
+    assert "<seriesInfo name=\"Journal\" value=\"Test Journal\"" in xml
+    assert "<seriesInfo name=\"Year\" value=\"2023\"" in xml
+
+def test_book_entry():
+    """Test conversion of a BOOK entry with optional fields."""
+    entry = BibTeXEntry(
+        key="book",
+        entry_type=BibTeXEntryType.BOOK,
+        fields={
+            "author": "Jane Smith",
+            "title": "Book Title",
+            "year": "2022",
+            "publisher": "Test Publisher",
+            "edition": "2nd",
+            "isbn": "123-456-789"
+        }
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert "<reference anchor=\"book\">" in xml
+    assert "<author fullname=\"Jane Smith\"" in xml
+    assert "<title>Book Title</title>" in xml
+    assert "<seriesInfo name=\"Publisher\" value=\"Test Publisher\"" in xml
+    assert "<seriesInfo name=\"Edition\" value=\"2nd\"" in xml
+    assert "<seriesInfo name=\"ISBN\" value=\"123-456-789\"" in xml
+
+def test_multiple_authors_editors():
+    """Test conversion with multiple authors and editors."""
+    entry = BibTeXEntry(
+        key="multi",
+        entry_type=BibTeXEntryType.ARTICLE,
+        fields={
+            "author": "John Doe and Jane Smith",
+            "editor": "Alice Brown and Bob Green",
+            "title": "Multi Author Title",
+            "year": "2023",
+            "journal": "Test Journal"
+        }
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert "<author fullname=\"John Doe\"" in xml
+    assert "<author fullname=\"Jane Smith\"" in xml
+    # Editors are not included in the XML output
+    assert "<author fullname=\"Alice Brown\"" not in xml
+    assert "<author fullname=\"Bob Green\"" not in xml
+
+def test_special_fields():
+    """Test conversion with special/unhandled fields."""
+    entry = BibTeXEntry(
+        key="special",
+        entry_type=BibTeXEntryType.ARTICLE,
+        fields={
+            "author": "John Doe",
+            "title": "Special Fields Title",
+            "year": "2023",
+            "journal": "Test Journal",
+            "url": "http://example.com",
+            "doi": "10.1234/example"
+            # Removed custom_field as it's not allowed
+        }
+    )
+    xml = bibtex_entry_to_rfcxml(entry)
+    assert "<format type=\"TXT\" target=\"http://example.com\"" in xml
+    assert "<format type=\"DOI\" target=\"https://doi.org/10.1234/example\"" in xml 

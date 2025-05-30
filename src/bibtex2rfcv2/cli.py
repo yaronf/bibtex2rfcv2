@@ -8,6 +8,7 @@ import click
 from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
 from bibtex2rfcv2.parser import parse_bibtex
 from pathlib import Path
+from tqdm import tqdm
 
 from bibtex2rfcv2 import __version__
 
@@ -22,7 +23,8 @@ def main() -> None:
 @main.command()
 @click.argument("input_file")
 @click.argument("output_file")
-def convert(input_file: str, output_file: str) -> None:
+@click.option("--progress/--no-progress", default=True, help="Show progress bar")
+def convert(input_file: str, output_file: str, progress: bool) -> None:
     """Convert a BibTeX file to RFC XML format.
     
     Use '-' for input_file to read from stdin.
@@ -42,17 +44,21 @@ def convert(input_file: str, output_file: str) -> None:
                 sys.exit(1)
             entries = parse_bibtex(Path(input_file))
 
+        if not entries:
+            click.echo('Warning: No BibTeX entries found in input.', err=True)
+            sys.exit(0)
+
         # Handle stdout
         if output_file == '-':
-            for entry in entries:
+            for entry in tqdm(entries, desc="Converting entries", disable=not progress):
                 xml = bibtex_entry_to_rfcxml(entry)
                 click.echo(xml)
         else:
             with open(output_file, 'w') as f:
-                for entry in entries:
+                for entry in tqdm(entries, desc="Converting entries", disable=not progress):
                     xml = bibtex_entry_to_rfcxml(entry)
                     f.write(xml + '\n')
-            click.echo(f'Conversion completed. Output written to {output_file}.', err=True)
+            click.echo(f'Conversion completed. {len(entries)} entries written to {output_file}.', err=True)
     except Exception as e:
         click.echo(f'Error: {e}', err=True)
         sys.exit(1)

@@ -65,8 +65,8 @@ The plan follows the PRD's implementation phases and test-driven development met
    - Test: Check CI integration
 
 9. Create initial empty modules for core functionality
-   - Test: Verify imports work
-   - Test: Check module structure
+    - Test: Verify imports work
+    - Test: Check module structure
 
 ## Phase 2: Feature Enhancement
 10. Create BibTeX entry type model with basic fields
@@ -135,59 +135,66 @@ The plan follows the PRD's implementation phases and test-driven development met
     - Test: Stdout writing tests
     - Test: Pipe handling tests
 
-23. Implement batch processing
+23. Implement batch processing - multiple references in the same document
     - Test: Batch processing tests
     - Test: Error handling tests
     - Test: Progress reporting tests
 
-24. Add progress indicators
-    - Test: Progress display tests
-    - Test: Progress accuracy tests
-    - Test: UI update tests
-
-25. Create configuration file support
-    - Test: Config loading tests
-    - Test: Config validation tests
-    - Test: Config override tests
-
-26. Implement interactive mode
-    - Test: Interactive command tests
-    - Test: User input tests
-    - Test: Error recovery tests
-
-27. Add preview functionality
-    - Test: Preview generation tests
-    - Test: Preview display tests
-    - Test: Preview update tests
+24. Fix GitHub Actions CI/CD pipeline
+    - Test: Debug current workflow failures
+    - Test: Update Python version compatibility
+    - Test: Verify dependency installation
+    - Test: Check test execution in CI environment
+    - Test: Validate artifact generation
+    - Test: Ensure proper error reporting
+    - Test: Verify workflow triggers
 
 ## Phase 4: Testing and Optimization
-28. Implement comprehensive test suite
+25. Implement comprehensive test suite
     - Test: Unit test coverage
     - Test: Integration test coverage
     - Test: End-to-end test coverage
     - Test: Performance test coverage
     - Test: Error handling test coverage
 
-29. Optimize performance
+26. Optimize performance
     - Test: Processing speed tests
     - Test: Memory usage tests
     - Test: Load tests
     - Test: Stress tests
 
-30. Implement security measures
+27. Implement security measures
     - Test: Input validation
     - Test: File handling security
     - Test: Permission handling
     - Test: Security audit
 
-31. Create comprehensive documentation
+28. Create comprehensive documentation
     - Test: API documentation
     - Test: CLI documentation
     - Test: Example files
     - Test: Troubleshooting guide
 
-32. Final review and cleanup
+29. Final review and cleanup
     - Test: Code quality check
     - Test: Documentation review
     - Test: Performance verification
-    - Test: Security verification 
+    - Test: Security verification
+
+## Phase 5: Additional Output Formats
+30. Add Markdown (kdrfc) output format support
+    - Test: Markdown conversion tests
+    - Test: Format validation tests
+    - Test: Special character handling in Markdown
+    - Test: Cross-format consistency tests
+    - Test: CLI option for format selection
+
+## Phase 6: Package Distribution
+31. Prepare package for PyPI distribution
+    - Test: Package build process
+    - Test: Installation from PyPI
+    - Test: Dependencies resolution
+    - Test: Package metadata verification
+    - Test: Documentation for PyPI
+    - Test: Version management
+    - Test: Release process automation 

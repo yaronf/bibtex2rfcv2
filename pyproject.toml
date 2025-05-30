@@ -5,17 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "bibtex2rfcv2"
 version = "0.1.0"
-description = "Modern BibTeX to RFC XML converter"
+description = "Convert BibTeX citations to RFC-compliant XML references"
 readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
+license = {text = "MIT"}
 authors = [
-    { name = "Yaron Sheffer", email = "yaronf.ietf@gmail.com" }
+    {name = "Yaron Sheffer", email = "yaronf.ietf@gmail.com"},
 ]
 dependencies = [
-    "bibtexparser>=1.4.0",
+    "bibtexparser>=1.4.3",
     "lxml>=4.9.0",
-    "click>=8.1.0",
+    "click>=8.0.0",
+    "tqdm>=4.65.0",
 ]
 
 [project.optional-dependencies]
@@ -29,16 +30,32 @@ dev = [
 ]
 
 [project.scripts]
-bibtex2rfc = "bibtex2rfcv2.cli:main"
+bibtex2rfcv2 = "bibtex2rfcv2.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v --cov=bibtex2rfcv2"
 
+[tool.coverage.run]
+source = ["bibtex2rfcv2"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "pass",
+    "@abstractmethod",
+]
+
 [tool.black]
 line-length = 88
 target-version = ["py38"]
+include = '\.pyi?$'
 
 [tool.mypy]
 python_version = "3.8"
