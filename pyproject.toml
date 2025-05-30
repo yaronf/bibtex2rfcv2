@@ -7,7 +7,7 @@ name = "bibtex2rfcv2"
 version = "0.1.0"
 description = "Convert BibTeX citations to RFC-compliant XML references"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Yaron Sheffer", email = "yaronf.ietf@gmail.com"},
