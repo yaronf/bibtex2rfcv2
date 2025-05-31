@@ -68,3 +68,5 @@ coverage.xml
 env/
 venv/
 ENV/ 
+.venv-py310/
+original_repo/
