@@ -4,7 +4,7 @@ Bla.
 
 # Introduction {#introduction}
 
-Bla.
+Here's a citation we like: {{test}}.
 
 ## Conventions Used in this Document {#conventions-used-in-this-document}
 

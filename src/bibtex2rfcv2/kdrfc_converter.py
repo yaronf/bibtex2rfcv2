@@ -35,11 +35,11 @@ def bibtex_entry_to_kdrfc(entry: BibTeXEntry) -> str:
             authors = ["Unknown"]
         # Create YAML structure
         yaml_output = f"{entry.key}:\n"
+        yaml_output += f"  title: {title}\n"
         yaml_output += f"  author:\n"
         for author in authors:
-            yaml_output += f"  - ins: {author}\n"
-            yaml_output += f"    name: {author}\n"
-        yaml_output += f"  title: {title}\n"
+            yaml_output += f"    - ins: {author}\n"
+            yaml_output += f"      name: {author}\n"
         # Add other fields as needed
         # --- End conversion logic ---
         return yaml_output

@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest import mock
 import tempfile
 import subprocess
+from bibtex2rfcv2.parser import parse_bibtex
 
 
 def test_version() -> None:
@@ -256,6 +257,8 @@ def test_kdrfc_processing():
         # Print the generated YAML content for inspection
         print("Generated YAML content:")
         print(yaml_content)
+        print("\nYAML content with newline markers:")
+        print(yaml_content.replace('\n', '\\n'))
 
         # Copy preamble and postamble files into the isolated filesystem
         shutil.copyfile(os.path.join(os.path.dirname(__file__), 'fixtures', 'preamble.md'), 'preamble.md')
@@ -266,11 +269,26 @@ def test_kdrfc_processing():
             preamble_content = f.read()
         with open('postamble.md') as f:
             postamble_content = f.read()
-        full_markdown = preamble_content + yaml_content + postamble_content
+        # Replace the citation in postamble with the actual anchor from the BibTeX entry
+        with open('tests/data/minimal.bibtex') as f:
+            entries = parse_bibtex(f.read())
+            entry = entries[0]  # Get the first (and only) entry
+            postamble_content = postamble_content.replace('{{test}}', f'{{{{{entry.key}}}}}')
+        
+        # Split the YAML content to get just the reference part
+        yaml_lines = yaml_content.strip().split('\n')
+        reference_yaml = '\n'.join('  ' + line for line in yaml_lines)  # Indent the reference content
+        
+        # Insert the reference under the informative section
+        preamble_content = preamble_content.replace('informative:', 'informative:\n' + reference_yaml)
+        
+        full_markdown = preamble_content.rstrip() + '\n\n' + postamble_content.lstrip()
 
         # Print the full Markdown content for inspection
         print("Full Markdown content:")
         print(full_markdown)
+        print("\nFull Markdown content with newline markers:")
+        print(full_markdown.replace('\n', '\\n'))
 
         # Write to temporary file and validate with kdrfc
         with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as tmp:
@@ -278,8 +296,19 @@ def test_kdrfc_processing():
             tmp_path = tmp.name
         try:
             result = subprocess.run([
-                "kdrfc", tmp_path, "-v", "-x"
+                "kdrfc", tmp_path, "-v"
             ], capture_output=True, text=True)
+            print("\nDebug: kdrfc output:")
+            print(result.stdout)
+            print("\nDebug: kdrfc error output:")
+            print(result.stderr)
+            
+            # Read and print the generated XML
+            xml_path = tmp_path.replace('.md', '.xml')
+            with open(xml_path) as f:
+                print("\nDebug: Generated XML:")
+                print(f.read())
+                
             assert result.returncode == 0, f"kdrfc validation failed: {result.stderr}"
         finally:
             os.remove(tmp_path) 
