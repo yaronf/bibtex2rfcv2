@@ -11,6 +11,8 @@ import glob
 import re
 import xml.etree.ElementTree as ET
 from bibtex2rfcv2.error_handling import InvalidInputError, FileNotFoundError, ConversionError
+import types
+from bibtex2rfcv2.converter import bibtex_entry_to_kdrfc
 
 def test_article_to_rfcxml():
     entry = BibTeXEntry(
@@ -719,4 +721,70 @@ def test_conversion_error(monkeypatch):
         },
     )
     with pytest.raises(ConversionError):
-        bibtex_entry_to_rfcxml(entry) 
+        bibtex_entry_to_rfcxml(entry)
+
+def test_bibtex_entry_to_rfcxml_conversion_error(monkeypatch):
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="errorkey",
+        fields={"author": "A", "title": "T", "journal": "J", "year": "2020"}
+    )
+    # Patch a method used in the conversion to raise an error
+    monkeypatch.setattr(entry, "get_field", lambda x: (_ for _ in ()).throw(ValueError("fail!")))
+    with pytest.raises(ConversionError, match="Conversion failed: fail!"):
+        bibtex_entry_to_rfcxml(entry)
+
+def test_bibtex_entry_to_kdrfc_conversion_error(monkeypatch):
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="errorkey",
+        fields={"author": "A", "title": "T", "journal": "J", "year": "2020"}
+    )
+    # Patch a method used in the conversion to raise an error
+    monkeypatch.setattr(entry, "get_field", lambda x: (_ for _ in ()).throw(ValueError("fail!")))
+    with pytest.raises(ConversionError, match="Conversion failed: fail!"):
+        bibtex_entry_to_kdrfc(entry)
+
+def test_bibtex_entry_to_kdrfc_only_editors():
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.BOOK,
+        key="editorkey",
+        fields={
+            "author": "Jane Editor",  # Required field for book
+            "editor": "Jane Editor",
+            "title": "Edited Book",
+            "publisher": "P",
+            "year": "2020"
+        }
+    )
+    yaml = bibtex_entry_to_kdrfc(entry)
+    assert "Jane Editor" in yaml
+    assert "Edited Book" in yaml
+    assert "authors:" in yaml
+
+def test_bibtex_entry_to_kdrfc_no_authors_or_editors():
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.BOOK,
+        key="nokey",
+        fields={
+            "author": "Unknown",  # Required field for book
+            "title": "No Author Book",
+            "publisher": "P",
+            "year": "2020"
+        }
+    )
+    yaml = bibtex_entry_to_kdrfc(entry)
+    assert "Unknown" in yaml
+    assert "No Author Book" in yaml
+    assert "authors:" in yaml
+
+def test_bibtex_entry_to_kdrfc_normal_case():
+    entry = BibTeXEntry(
+        entry_type=BibTeXEntryType.ARTICLE,
+        key="authorkey",
+        fields={"author": "John Doe", "title": "Normal Case", "journal": "J", "year": "2020"}
+    )
+    yaml = bibtex_entry_to_kdrfc(entry)
+    assert "John Doe" in yaml
+    assert "Normal Case" in yaml
+    assert "authors:" in yaml 
