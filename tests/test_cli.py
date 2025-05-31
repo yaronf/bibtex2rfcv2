@@ -10,6 +10,7 @@ from unittest import mock
 import tempfile
 import subprocess
 from bibtex2rfcv2.parser import parse_bibtex
+import yaml
 
 
 def test_version() -> None:
@@ -52,13 +53,12 @@ def test_to_kdrfc_command():
         # Check that output.yaml was created and contains expected YAML
         with open('output.yaml') as f:
             yaml_content = f.read()
-        assert 'title: Test Title' in yaml_content
-        assert 'author:' in yaml_content
-        assert '    - ins: John Doe' in yaml_content
-        assert '      name: John Doe' in yaml_content
-        assert '  date:' in yaml_content
-        assert '    year: 2023' in yaml_content
-        assert '  journal: Test Journal' in yaml_content
+        data = yaml.safe_load(yaml_content)
+        entry = data['test']
+        assert entry['title'] == 'Test Title'
+        assert entry['author'] == [{'ins': 'John Doe', 'name': 'John Doe'}]
+        assert entry['date'] == {'year': 2023}
+        assert entry['journal'] == 'Test Journal'
 
 
 def test_to_xml_command_with_missing_fields():
