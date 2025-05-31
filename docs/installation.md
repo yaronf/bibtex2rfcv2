@@ -1,7 +1,7 @@
 # Installation Guide
 
 ## Requirements
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 
 ## Basic Installation
@@ -31,7 +31,7 @@ echo '@article{test, title="Test", author="Author"}' | bibtex2rfc > test.xml
 ## Troubleshooting
 If you encounter any issues during installation:
 
-1. Ensure you have Python 3.8 or higher:
+1. Ensure you have Python 3.10 or higher:
    ```bash
    python --version
    ```

@@ -36,7 +36,7 @@ pip install bibtex2rfcv2
 ## Usage Issues
 
 ### Command Not Found
-**Problem**: `bibtex2rfcv2` command not found
+**Problem**: `bibtex2rfc` command not found
 **Solution**: 
 1. Verify installation:
 ```bash
@@ -65,7 +65,7 @@ ls -ld .
 ```
 3. Use absolute paths if needed:
 ```bash
-bibtex2rfcv2 convert /full/path/to/input.bib /full/path/to/output.xml
+bibtex2rfc convert /full/path/to/input.bib /full/path/to/output.xml
 ```
 
 ### BibTeX Parsing Errors
@@ -108,7 +108,7 @@ file -i input.bib
 2. Verify all required fields
 3. Use `--no-progress` for verbose output:
 ```bash
-bibtex2rfcv2 convert --no-progress input.bib output.xml
+bibtex2rfc convert --no-progress input.bib output.xml
 ```
 
 #### Missing References
@@ -127,7 +127,7 @@ bibtex2rfcv2 convert --no-progress input.bib output.xml
 2. Process files in smaller batches
 3. Use stdin/stdout for piping:
 ```bash
-cat large.bib | bibtex2rfcv2 convert - output.xml
+cat large.bib | bibtex2rfc convert - output.xml
 ```
 
 ### Memory Usage
@@ -137,7 +137,7 @@ cat large.bib | bibtex2rfcv2 convert - output.xml
 2. Use streaming input/output
 3. Monitor memory usage:
 ```bash
-top -p $(pgrep -f bibtex2rfcv2)
+top -p $(pgrep -f bibtex2rfc)
 ```
 
 ## Development Issues
