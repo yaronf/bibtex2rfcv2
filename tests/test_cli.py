@@ -236,4 +236,98 @@ def test_batch_processing():
                 print(full_xml)
             assert result.returncode == 0, f"xml2rfc validation failed: {result.stderr}"
         finally:
-            os.remove(tmp_path) 
+            os.remove(tmp_path)
+
+
+def test_to_xml_command_with_empty_file():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/empty.bibtex', 'w') as f:
+            f.write('')
+        result = runner.invoke(main, ['to-xml', 'tests/data/empty.bibtex', 'output.xml'])
+        assert result.exit_code == 0
+        assert 'Warning: No BibTeX entries found in input.' in result.output
+
+
+def test_to_kdrfc_command_with_empty_file():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/empty.bibtex', 'w') as f:
+            f.write('')
+        result = runner.invoke(main, ['to-kdrfc', 'tests/data/empty.bibtex', 'output.yaml'])
+        assert result.exit_code == 0
+        assert 'Warning: No BibTeX entries found in input.' in result.output
+
+
+def test_to_xml_command_with_invalid_bibtex():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/invalid.bibtex', 'w') as f:
+            f.write('@invalid{')
+        result = runner.invoke(main, ['to-xml', 'tests/data/invalid.bibtex', 'output.xml'])
+        assert result.exit_code != 0
+        assert 'Error:' in result.output
+
+
+def test_to_kdrfc_command_with_invalid_bibtex():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/invalid.bibtex', 'w') as f:
+            f.write('@invalid{')
+        result = runner.invoke(main, ['to-kdrfc', 'tests/data/invalid.bibtex', 'output.yaml'])
+        assert result.exit_code != 0
+        assert 'Error:' in result.output
+
+
+def test_to_xml_command_with_permission_denied():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/restricted.bibtex', 'w') as f:
+            f.write('@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}')
+        os.chmod('tests/data/restricted.bibtex', 0o000)
+        result = runner.invoke(main, ['to-xml', 'tests/data/restricted.bibtex', 'output.xml'])
+        assert result.exit_code != 0
+        assert 'Error: Permission denied' in result.output
+
+
+def test_to_kdrfc_command_with_permission_denied():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/restricted.bibtex', 'w') as f:
+            f.write('@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}')
+        os.chmod('tests/data/restricted.bibtex', 0o000)
+        result = runner.invoke(main, ['to-kdrfc', 'tests/data/restricted.bibtex', 'output.yaml'])
+        assert result.exit_code != 0
+        assert 'Error: Permission denied' in result.output
+
+
+def test_to_xml_command_with_exception():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/exception.bibtex', 'w') as f:
+            f.write('@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}')
+        with mock.patch('bibtex2rfcv2.cli.bibtex_entry_to_rfcxml', side_effect=Exception('Test exception')) as mock_func:
+            result = runner.invoke(main, ['to-xml', 'tests/data/exception.bibtex', 'output.xml'])
+            assert result.exit_code == 1
+            assert 'Error: Test exception' in result.output
+            assert mock_func.called, "Mocked function was not called"
+
+
+def test_to_kdrfc_command_with_exception():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        os.makedirs('tests/data', exist_ok=True)
+        with open('tests/data/exception.bibtex', 'w') as f:
+            f.write('@article{test, author="John Doe", title="Test Title", year="2023", journal="Test Journal"}')
+        with mock.patch('bibtex2rfcv2.cli.bibtex_entry_to_kdrfc', side_effect=Exception('Test exception')) as mock_func:
+            result = runner.invoke(main, ['to-kdrfc', 'tests/data/exception.bibtex', 'output.yaml'])
+            assert result.exit_code == 1
+            assert 'Error: Test exception' in result.output
+            assert mock_func.called, "Mocked function was not called" 

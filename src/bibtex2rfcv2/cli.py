@@ -57,11 +57,13 @@ def to_xml(input_file: str, output_file: str, progress: bool) -> None:
         # Handle stdout
         if output_file == '-':
             for entry in tqdm(entries, desc="Converting entries", disable=not progress):
+                logger.info("Calling bibtex_entry_to_rfcxml for entry: %s", entry)
                 xml = bibtex_entry_to_rfcxml(entry)
                 click.echo(xml)
         else:
             with open(output_file, 'w') as f:
                 for entry in tqdm(entries, desc="Converting entries", disable=not progress):
+                    logger.info("Calling bibtex_entry_to_rfcxml for entry: %s", entry)
                     xml = bibtex_entry_to_rfcxml(entry)
                     f.write(xml + '\n')
             click.echo(f'Conversion completed. {len(entries)} entries written to {output_file}.', err=True)
@@ -107,12 +109,14 @@ def to_kdrfc(input_file: str, output_file: str, progress: bool) -> None:
         if output_file == '-':
             logger.info("Writing to stdout.")
             for entry in tqdm(entries, desc="Converting entries", disable=not progress):
+                logger.info("Calling bibtex_entry_to_kdrfc for entry: %s", entry)
                 yaml = bibtex_entry_to_kdrfc(entry)
                 click.echo(yaml)
         else:
             logger.info(f"Writing to file: {output_file}")
             with open(output_file, 'w') as f:
                 for entry in tqdm(entries, desc="Converting entries", disable=not progress):
+                    logger.info("Calling bibtex_entry_to_kdrfc for entry: %s", entry)
                     yaml = bibtex_entry_to_kdrfc(entry)
                     f.write(yaml + '\n')
             click.echo(f'Conversion completed. {len(entries)} entries written to {output_file}.', err=True)
