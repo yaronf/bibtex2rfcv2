@@ -27,6 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
           pip install xml2rfc
+          gem install kramdown-rfc2629
           
       - name: Run tests
         run: |
