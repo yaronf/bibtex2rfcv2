@@ -11,7 +11,7 @@ src_path = Path(__file__).parent.parent / "src"
 sys.path.append(str(src_path))
 
 from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
-from bibtex2rfcv2.converter import latex_to_unicode
+from bibtex2rfcv2.xml_converter import latex_to_unicode
 
 def generate_xml(entry: BibTeXEntry) -> str:
     """Generate XML representation of a BibTeX entry.

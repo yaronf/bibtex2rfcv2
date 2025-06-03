@@ -6,7 +6,7 @@ import os
 import logging
 
 import click
-from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 from bibtex2rfcv2.parser import parse_bibtex
 from pathlib import Path
 from tqdm import tqdm
@@ -120,6 +120,7 @@ def to_kdrfc(input_file: str, output_file: str, progress: bool) -> None:
                     yaml = bibtex_entry_to_kdrfc(entry)
                     f.write(yaml + '\n')
             click.echo(f'Conversion completed. {len(entries)} entries written to {output_file}.', err=True)
+            print(f"Output of to-kdrfc command: {yaml}")
     except Exception as e:
         logger.error(f"Conversion failed: {e}")
         click.echo(f'Error: {e}', err=True)

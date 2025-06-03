@@ -2,8 +2,10 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Any, Union
 from bibtex2rfcv2.error_handling import InvalidInputError
+from bibtex2rfcv2.utils import latex_to_unicode
+import re
 
 
 class BibTeXEntryType(str, Enum):
@@ -80,24 +82,6 @@ class BibTeXEntry:
         Raises:
             InvalidInputError: If required fields are missing or if fields have invalid formats.
         """
-        # Check for invalid fields
-        valid_fields = {
-            "author", "title", "journal", "year", "month", "day", "publisher", "editor",
-            "volume", "number", "pages", "booktitle", "institution", "school", "abstract",
-            "note", "url", "doi", "isbn", "issn", "lccn", "mrnumber", "zblnumber",
-            "howpublished", "date-modified", "posted-at", "archive", "archiveprefix",
-            "arxivid", "pubmedid", "pmcid", "keywords", "timestamp", "series", "edition",
-            "address", "organization", "chapter", "type", "language", "location", "annote",
-            "crossref", "key", "mendeley-tags", "priority", "citeulike-article-id", "citeulike-linkout-0",
-            "citeulike-linkout-1", "citeulike-linkout-2", "citeulike-linkout-3", "citeulike-linkout-4",
-            "citeulike-linkout-5", "citeulike-linkout-6", "citeulike-linkout-7", "citeulike-linkout-8",
-            "citeulike-linkout-9", "citeulike-linkout-10", "biburl", "added-by", "interhash",
-            "added-at", "intrahash"
-        }
-        invalid_fields = set(self.fields.keys()) - valid_fields
-        if invalid_fields:
-            raise InvalidInputError(f"Invalid fields: {', '.join(invalid_fields)}")
-
         # Validate field formats
         if "year" in self.fields:
             year = self.fields["year"]
@@ -124,8 +108,14 @@ class BibTeXEntry:
         """
         value = self.fields.get(field_name, default)
         if value is not None:
-            # Remove curly braces from the value
+            if isinstance(value, list):
+                # For lists (like authors), return the list as is
+                return value
+            # Remove single curly braces but preserve double braces
+            value = value.replace("{{", "").replace("}}", "")
             value = value.replace("{", "").replace("}", "")
+            # Normalize multiline fields by replacing newlines with spaces
+            value = value.replace("\n", " ")
         return value
 
     def has_field(self, field_name: str) -> bool:
@@ -139,14 +129,70 @@ class BibTeXEntry:
         """
         return field_name in self.fields
 
-    def get_authors(self) -> List[str]:
-        """Get the list of authors.
-
+    def _process_names(self, field_value: Union[str, List[str]]) -> List[str]:
+        """Helper method to process author/editor names.
+        
+        Args:
+            field_value: String or list of strings containing author/editor names
+            
         Returns:
-            A list of author names.
+            List of author/editor names in "First Last" format
         """
-        if "author" not in self.fields:
+        if not field_value:
             return []
-        # Normalize whitespace and split authors by " and "
-        author_field = self.fields["author"].replace("\n", " ")
-        return [author.strip() for author in author_field.split(" and ")] 
+            
+        # Handle both list and string inputs
+        if isinstance(field_value, list):
+            names = field_value
+        else:
+            # Split on ' and ' but not within braces
+            names = []
+            current = ""
+            brace_level = 0
+            for char in field_value:
+                if char == '{':
+                    brace_level += 1
+                elif char == '}':
+                    brace_level -= 1
+                elif char == 'a' and brace_level == 0 and current.endswith(' '):
+                    # Check for ' and ' pattern
+                    if current.endswith(' and '):
+                        names.append(current[:-5].strip())
+                        current = ""
+                        continue
+                current += char
+            if current:
+                names.append(current.strip())
+        
+        # Process each name
+        processed_names = []
+        for name in names:
+            # Remove outer braces and convert LaTeX to Unicode
+            name = name.strip('{}')
+            name = latex_to_unicode(name)
+            
+            # Convert "Last, First" to "First Last"
+            if ', ' in name:
+                parts = name.split(', ', 1)
+                name = parts[1] + ' ' + parts[0]
+            
+            # Clean up whitespace
+            name = ' '.join(name.split())
+            if name:
+                processed_names.append(name)
+                
+        return processed_names
+
+    def get_authors(self) -> List[str]:
+        """Get list of authors from the author field."""
+        author_field = self.fields.get('author')
+        if author_field is None:
+            return []
+        return self._process_names(author_field)
+
+    def get_editors(self) -> List[str]:
+        """Get list of editors from the editor field."""
+        editor_field = self.fields.get('editor')
+        if editor_field is None:
+            return []
+        return self._process_names(editor_field) 

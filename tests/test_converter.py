@@ -2,7 +2,7 @@
 
 import pytest
 from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
-from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 import subprocess
 import tempfile
 import os
@@ -12,7 +12,10 @@ import re
 import xml.etree.ElementTree as ET
 from bibtex2rfcv2.error_handling import InvalidInputError, FileNotFoundError, ConversionError
 import types
-from bibtex2rfcv2.converter import bibtex_entry_to_kdrfc
+from bibtex2rfcv2.kdrfc_converter import bibtex_entry_to_kdrfc
+from bibtex2rfcv2.xml_converter import extract_ascii
+from bibtex2rfcv2 import xml_converter
+import yaml  # Add this import at the top if not present
 
 def test_article_to_rfcxml():
     entry = BibTeXEntry(
@@ -173,7 +176,7 @@ def test_techreport_to_rfcxml():
 def test_icml2023_bibtex_to_rfcxml():
     from pathlib import Path
     from bibtex2rfcv2.parser import parse_bibtex
-    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 
     bibtex_file = Path("tests/data/icml2023.bibtex")
     entries = parse_bibtex(bibtex_file)
@@ -196,7 +199,7 @@ def test_real_bibtex_files():
     """Test conversion of real BibTeX files from our data directory."""
     from pathlib import Path
     from bibtex2rfcv2.parser import parse_bibtex
-    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 
     # Test Knuth's book entry
     knuth_entries = parse_bibtex(Path("tests/data/knuth.bibtex"))
@@ -236,7 +239,7 @@ def test_real_bibtex_files():
 def test_rfcxml_valid_with_xml2rfc(bibfile):
     from pathlib import Path
     from bibtex2rfcv2.parser import parse_bibtex
-    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
     import tempfile
     import subprocess
     import os
@@ -435,7 +438,7 @@ def test_utf8_validation():
     import tempfile
     import xml.etree.ElementTree as ET
     from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
-    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 
     # 1 & 2: Non-ASCII and non-Latin characters
     entries = [
@@ -520,7 +523,7 @@ def test_utf8_validation():
 
 def test_error_handling():
     from bibtex2rfcv2.models import BibTeXEntry, BibTeXEntryType
-    from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+    from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
     from bibtex2rfcv2.error_handling import InvalidInputError, FileNotFoundError, ConversionError
     import pytest
     import os
@@ -593,8 +596,8 @@ def test_multiple_authors_editors():
         key="multi",
         entry_type=BibTeXEntryType.ARTICLE,
         fields={
-            "author": "John Doe and Jane Smith",
-            "editor": "Alice Brown and Bob Green",
+            "author": ["John Doe", "Jane Smith"],
+            "editor": ["Alice Brown", "Bob Green"],
             "title": "Multi Author Title",
             "year": "2023",
             "journal": "Test Journal"
@@ -619,16 +622,14 @@ def test_special_fields():
             "journal": "Test Journal",
             "url": "http://example.com",
             "doi": "10.1234/example"
-            # Removed custom_field as it's not allowed
         }
     )
     xml = bibtex_entry_to_rfcxml(entry)
-    assert "<format type=\"TXT\" target=\"http://example.com\"" in xml
-    assert "<format type=\"DOI\" target=\"https://doi.org/10.1234/example\"" in xml
+    assert "<seriesInfo name=\"URL\" value=\"http://example.com\"" in xml
+    assert "<seriesInfo name=\"DOI\" value=\"10.1234/example\"" in xml
 
 def test_extract_ascii_empty():
     """Test extract_ascii with empty text."""
-    from bibtex2rfcv2.converter import extract_ascii
     assert extract_ascii("") is None
     assert extract_ascii(None) is None
 
@@ -706,10 +707,10 @@ def test_conversion_error(monkeypatch):
     from bibtex2rfcv2.error_handling import ConversionError
     import pytest
     # Monkeypatch extract_ascii to raise ConversionError
-    from bibtex2rfcv2 import converter
+    from bibtex2rfcv2 import xml_converter
     def raise_error(*args, **kwargs):
         raise ConversionError("Forced error for testing")
-    monkeypatch.setattr(converter, "extract_ascii", raise_error)
+    monkeypatch.setattr(xml_converter, "extract_ascii", raise_error)
     entry = BibTeXEntry(
         entry_type=BibTeXEntryType.ARTICLE,
         key="error2023",
@@ -718,6 +719,7 @@ def test_conversion_error(monkeypatch):
             "title": "Test Title",
             "journal": "Test Journal",
             "year": "2023",
+            "abstract": "Test abstract with special chars: é, ü"
         },
     )
     with pytest.raises(ConversionError):
@@ -729,8 +731,8 @@ def test_bibtex_entry_to_rfcxml_conversion_error(monkeypatch):
         key="errorkey",
         fields={"author": "A", "title": "T", "journal": "J", "year": "2020"}
     )
-    # Patch a method used in the conversion to raise an error
-    monkeypatch.setattr(entry, "get_field", lambda x: (_ for _ in ()).throw(ValueError("fail!")))
+    # Patch get_authors to raise an error
+    monkeypatch.setattr(entry, "get_authors", lambda: (_ for _ in ()).throw(ValueError("fail!")))
     with pytest.raises(ConversionError, match="Conversion failed: fail!"):
         bibtex_entry_to_rfcxml(entry)
 
@@ -760,7 +762,7 @@ def test_bibtex_entry_to_kdrfc_only_editors():
     yaml = bibtex_entry_to_kdrfc(entry)
     assert "Jane Editor" in yaml
     assert "Edited Book" in yaml
-    assert "authors:" in yaml
+    assert "author:" in yaml
 
 def test_bibtex_entry_to_kdrfc_no_authors_or_editors():
     entry = BibTeXEntry(
@@ -776,7 +778,7 @@ def test_bibtex_entry_to_kdrfc_no_authors_or_editors():
     yaml = bibtex_entry_to_kdrfc(entry)
     assert "Unknown" in yaml
     assert "No Author Book" in yaml
-    assert "authors:" in yaml
+    assert "author:" in yaml
 
 def test_bibtex_entry_to_kdrfc_normal_case():
     entry = BibTeXEntry(
@@ -787,4 +789,79 @@ def test_bibtex_entry_to_kdrfc_normal_case():
     yaml = bibtex_entry_to_kdrfc(entry)
     assert "John Doe" in yaml
     assert "Normal Case" in yaml
-    assert "authors:" in yaml 
+    assert "author:" in yaml
+
+def test_author_name_handling():
+    """Test handling of author names in various formats."""
+    test_cases = [
+        # Single author, First Last format
+        {
+            "author": "John Doe",
+            "expected": ["John Doe"]
+        },
+        # Single author, Last, First format
+        {
+            "author": "Doe, John",
+            "expected": ["John Doe"]
+        },
+        # Multiple authors with 'and'
+        {
+            "author": "John Doe and Jane Smith",
+            "expected": ["John Doe", "Jane Smith"]
+        },
+        # Multiple authors with Last, First format
+        {
+            "author": "Doe, John and Smith, Jane",
+            "expected": ["John Doe", "Jane Smith"]
+        },
+        # Mixed formats
+        {
+            "author": "Doe, John and Jane Smith",
+            "expected": ["John Doe", "Jane Smith"]
+        },
+        # Authors with LaTeX accents
+        {
+            "author": "Jos{\\'e} Su{\\'a}rez and Andr{\\'e} L{\\\"u}t{\\\"u}",
+            "expected": ["José Suárez", "André Lütü"]
+        },
+        # Authors with braces
+        {
+            "author": "{John} {Doe} and {Jane} {Smith}",
+            "expected": ["John Doe", "Jane Smith"]
+        },
+        # Authors with double braces
+        {
+            "author": "{{John}} {{Doe}} and {{Jane}} {{Smith}}",
+            "expected": ["John Doe", "Jane Smith"]
+        }
+    ]
+
+    for i, test_case in enumerate(test_cases):
+        entry = BibTeXEntry(
+            entry_type=BibTeXEntryType.ARTICLE,
+            key=f"test{i}",
+            fields={
+                "author": test_case["author"],
+                "title": "Test Title",
+                "journal": "Test Journal",
+                "year": "2023"
+            }
+        )
+        
+        # Test get_authors()
+        authors = entry.get_authors()
+        assert authors == test_case["expected"], f"Failed for case {i}: got {authors}, expected {test_case['expected']}"
+        
+        # Test XML conversion
+        xml = bibtex_entry_to_rfcxml(entry)
+        for author in test_case["expected"]:
+            assert f'<author fullname="{author}"/>' in xml, f"XML missing author {author} for case {i}"
+        
+        # Test kdrfc conversion
+        yaml_str = bibtex_entry_to_kdrfc(entry)
+        parsed_yaml = yaml.safe_load(yaml_str)
+        key = f"test{i}"
+        yaml_authors = [a['name'] for a in parsed_yaml[key]['author']]
+        assert yaml_authors == test_case["expected"], f"YAML authors mismatch for case {i}: got {yaml_authors}, expected {test_case['expected']}"
+        yaml_ins = [a['ins'] for a in parsed_yaml[key]['author']]
+        assert yaml_ins == test_case["expected"], f"YAML ins mismatch for case {i}: got {yaml_ins}, expected {test_case['expected']}" 

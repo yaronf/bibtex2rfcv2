@@ -26,7 +26,7 @@ bibtex_str = '@article{test, title="Test"}'
 entries = parse_bibtex(bibtex_str)
 ```
 
-### bibtex2rfcv2.converter
+### bibtex2rfcv2.xml_converter
 
 #### `bibtex_entry_to_rfcxml(entry: Dict[str, str]) -> str`
 Convert a BibTeX entry dictionary to RFC XML format.
@@ -39,7 +39,7 @@ Convert a BibTeX entry dictionary to RFC XML format.
 
 **Example:**
 ```python
-from bibtex2rfcv2.converter import bibtex_entry_to_rfcxml
+from bibtex2rfcv2.xml_converter import bibtex_entry_to_rfcxml
 
 entry = {
     'type': 'article',

@@ -15,7 +15,7 @@ def test_parse_bibtex_file(sample_bibtex_file: Path) -> None:
     entry = entries[0]
     assert entry.entry_type == "article"
     assert entry.key == "825694"
-    assert "Altman" in entry.fields["author"]
+    assert "Altman" in entry.get_field("author")
     assert entry.fields["title"] == "Welcome to the opportunities of binary translation"
     assert entry.fields["year"] == "2000"
     assert entry.fields["volume"] == "33"

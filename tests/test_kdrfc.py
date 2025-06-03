@@ -9,14 +9,18 @@ import subprocess
 from bibtex2rfcv2.cli import main
 from bibtex2rfcv2.parser import parse_bibtex
 import yaml
+import pytest
+from bibtex2rfcv2.error_handling import InvalidInputError
 
 def run_kdrfc_test(bibtex_str, expected_fields, anchor):
     runner = CliRunner()
     with runner.isolated_filesystem():
-        os.makedirs('tests/data', exist_ok=True)
         bib_path = f'tests/data/{anchor}.bibtex'
+        os.makedirs(os.path.dirname(bib_path), exist_ok=True)
         with open(bib_path, 'w') as f:
             f.write(bibtex_str)
+        print(f"bibtex_str: {bibtex_str}")
+        print(f"expected_fields: {expected_fields}")
         result = runner.invoke(main, ['to-kdrfc', bib_path, 'output.yaml'])
         assert result.exit_code == 0
         assert 'Conversion completed. 1 entries written to output.yaml.' in result.output
@@ -158,4 +162,106 @@ def test_kdrfc_techreport_entry():
         'date': {'year': 1997},
         'author': [{'ins': 'S. Bradner', 'name': 'S. Bradner'}],
     }
-    run_kdrfc_test(bibtex, expected, 'rfc2119') 
+    run_kdrfc_test(bibtex, expected, 'rfc2119')
+
+# Discover all .bibtex files recursively under tests/data/
+bibtex_files = [str(p.relative_to("tests/data")) for p in Path("tests/data").rglob("*.bibtex") if p.name != "invalid_encoding.bibtex"]
+
+@pytest.mark.parametrize("bibfile", bibtex_files)
+def test_kdrfc_all_bibtex_files(bibfile):
+    """Test kdrfc conversion for all BibTeX files in the test data directory (recursively)."""
+    from pathlib import Path
+    from bibtex2rfcv2.parser import parse_bibtex
+    from bibtex2rfcv2.error_handling import InvalidInputError
+
+    # Parse BibTeX file
+    bib_path = Path("tests/data") / bibfile
+    try:
+        entries = parse_bibtex(bib_path)
+    except InvalidInputError as e:
+        if "No valid BibTeX entries found" in str(e):
+            pytest.skip(f"Skipping file with no valid entries: {bibfile}")
+        else:
+            raise
+    except FileNotFoundError as e:
+        if str(bibfile) == "invalid_encoding.bibtex":
+            pytest.skip(f"Skipping file with invalid encoding: {bibfile}")
+        else:
+            raise
+
+    assert len(entries) > 0, f"No entries found in {bibfile}"
+
+    # Test each entry
+    for entry in entries:
+        # Skip entries missing required fields
+        if not (entry.fields.get('author') or entry.fields.get('editor')) or not entry.fields.get('title'):
+            pytest.skip(f"Skipping entry {entry.key} missing required fields: author/editor or title")
+        # Convert entry back to BibTeX string format
+        bibtex_str = f"@{entry.entry_type.value}{{{entry.key},\n"
+        for field, value in entry.fields.items():
+            # Handle different value types
+            if isinstance(value, list):
+                # If list contains dictionaries with 'name' field, extract names
+                if value and isinstance(value[0], dict) and 'name' in value[0]:
+                    value = ' and '.join(v['name'] for v in value)
+                else:
+                    value = ' and '.join(str(v) for v in value)
+            elif isinstance(value, dict):
+                # If dictionary has 'name' field, use that
+                if 'name' in value:
+                    value = value['name']
+                else:
+                    value = str(value)
+            else:
+                value = str(value)
+            bibtex_str += f"    {field} = \"{value}\",\n"
+        bibtex_str = bibtex_str.rstrip(",\n") + "\n}"
+
+        # Create expected fields dictionary
+        title_val = entry.fields.get('title', '').replace('{', '').replace('}', '').replace('\n', ' ')
+        date_dict = {'year': int(entry.fields.get('year', 0))}
+        if 'month' in entry.fields and entry.fields.get('month', ''):
+            date_dict['month'] = entry.fields['month']
+        
+        # Handle author field which may be a list or string
+        author_field = entry.fields.get('author', '')
+        if isinstance(author_field, list):
+            authors = author_field
+        else:
+            authors = [author_field]
+        
+        # Convert 'Last, First' to 'First Last' for expected values
+        def to_first_last(name):
+            name = name.strip()
+            if ', ' in name:
+                parts = name.split(', ', 1)
+                return parts[1] + ' ' + parts[0]
+            return name
+        authors = [to_first_last(author) for author in authors]
+
+        expected = {
+            'title': title_val,
+            'date': date_dict,
+            'author': [{'ins': author, 'name': author} for author in authors],
+        }
+        # Add optional fields if present
+        for field in ['journal', 'publisher', 'booktitle', 'school', 'institution', 'number', 'note', 'pages', 'url', 'abstract', 'isbn', 'edition']:
+            if field in entry.fields:
+                val = entry.fields[field].replace('{', '').replace('}', '').replace('\n', ' ')
+                # Convert number/edition to int if possible
+                if field in ['number', 'edition']:
+                    if val.isdigit():
+                        val = int(val)
+                expected[field] = val
+
+        # Run the test using existing function
+        run_kdrfc_test(bibtex_str, expected, entry.key)
+
+def test_kdrfc_invalid_encoding():
+    """Test that a file with invalid encoding raises InvalidInputError."""
+    from pathlib import Path
+    from bibtex2rfcv2.parser import parse_bibtex
+    from bibtex2rfcv2.error_handling import InvalidInputError
+    bib_path = Path("tests/data/invalid_encoding.bibtex")
+    with pytest.raises(InvalidInputError):
+        parse_bibtex(bib_path) 

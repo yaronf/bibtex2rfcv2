@@ -1,20 +1,9 @@
 """RFC XML v3 reference models for BibTeX to RFC conversion."""
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Dict, List, Optional, Set
 from xml.sax.saxutils import escape
 from bibtex2rfcv2.utils import latex_to_unicode
-
-
-class ReferenceStatus(str, Enum):
-    """RFC XML reference status values."""
-
-    INFORMATIONAL = "informational"
-    STANDARDS_TRACK = "standards-track"
-    EXPERIMENTAL = "experimental"
-    HISTORIC = "historic"
-    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -131,48 +120,6 @@ class SeriesInfo:
 
 
 @dataclass
-class Format:
-    """RFC XML format information."""
-
-    type: str
-    target: Optional[str] = None
-    octets: Optional[str] = None
-    ascii_type: Optional[str] = None
-    ascii_target: Optional[str] = None
-
-    def to_xml(self) -> str:
-        """Convert format to XML."""
-        attrs = [f'type="{escape(self.type)}"']
-        if self.target:
-            attrs.append(f'target="{escape(self.target)}"')
-        if self.octets:
-            attrs.append(f'octets="{escape(self.octets)}"')
-        if self.ascii_type:
-            attrs.append(f'asciiType="{escape(self.ascii_type)}"')
-        if self.ascii_target:
-            attrs.append(f'asciiTarget="{escape(self.ascii_target)}"')
-        return f'<format {" ".join(attrs)}/>'
-
-
-@dataclass
-class Annotation:
-    """RFC XML annotation information."""
-
-    text: str
-    anchor: Optional[str] = None
-    ascii_text: Optional[str] = None
-
-    def to_xml(self) -> str:
-        """Convert annotation to XML."""
-        attrs = []
-        if self.anchor:
-            attrs.append(f'anchor="{escape(self.anchor)}"')
-        if self.ascii_text:
-            attrs.append(f'asciiText="{escape(self.ascii_text)}"')
-        return f'<annotation{" " + " ".join(attrs) if attrs else ""}>{escape(self.text)}</annotation>'
-
-
-@dataclass
 class Front:
     """RFC XML front matter."""
 
@@ -224,10 +171,8 @@ class Reference:
     anchor: str
     front: Front
     series_info: List[SeriesInfo] = field(default_factory=list)
-    formats: List[Format] = field(default_factory=list)
-    annotations: List[Annotation] = field(default_factory=list)
     target: Optional[str] = None
-    status: Optional[ReferenceStatus] = None
+    status: Optional[str] = None
     organization: Optional[str] = None
     date: Optional[Date] = None
     ascii_anchor: Optional[str] = None
@@ -240,7 +185,7 @@ class Reference:
         if self.target:
             attrs.append(f'target="{escape(self.target)}"')
         if self.status:
-            attrs.append(f'status="{self.status.value}"')
+            attrs.append(f'status="{escape(self.status)}"')
         if self.organization:
             attrs.append(f'organization="{escape(self.organization)}"')
         if self.ascii_anchor:
@@ -254,62 +199,7 @@ class Reference:
         xml.append(f'  {self.front.to_xml()}')
         for info in self.series_info:
             xml.append(f'  {info.to_xml()}')
-        for fmt in self.formats:
-            xml.append(f'  {fmt.to_xml()}')
-        for annotation in self.annotations:
-            xml.append(f'  {annotation.to_xml()}')
+        if self.date:
+            xml.append(f'  {self.date.to_xml()}')
         xml.append('</reference>')
-        return '\n'.join(xml)
-
-
-@dataclass
-class ReferenceGroup:
-    """RFC XML reference group."""
-
-    anchor: str
-    references: List[Reference] = field(default_factory=list)
-    title: Optional[str] = None
-    ascii_anchor: Optional[str] = None
-    ascii_title: Optional[str] = None
-
-    def to_xml(self) -> str:
-        """Convert reference group to XML."""
-        attrs = [f'anchor="{escape(self.anchor)}"']
-        if self.title:
-            attrs.append(f'title="{escape(self.title)}"')
-        if self.ascii_anchor:
-            attrs.append(f'asciiAnchor="{escape(self.ascii_anchor)}"')
-        if self.ascii_title:
-            attrs.append(f'asciiTitle="{escape(self.ascii_title)}"')
-
-        xml = [f'<referencegroup {" ".join(attrs)}>']
-        for ref in self.references:
-            xml.append(f'  {ref.to_xml()}')
-        xml.append('</referencegroup>')
-        return '\n'.join(xml)
-
-
-@dataclass
-class References:
-    """RFC XML references section."""
-
-    references: List[Reference] = field(default_factory=list)
-    reference_groups: List[ReferenceGroup] = field(default_factory=list)
-    title: Optional[str] = None
-    ascii_title: Optional[str] = None
-
-    def to_xml(self) -> str:
-        """Convert references section to XML."""
-        attrs = []
-        if self.title:
-            attrs.append(f'title="{escape(self.title)}"')
-        if self.ascii_title:
-            attrs.append(f'asciiTitle="{escape(self.ascii_title)}"')
-
-        xml = [f'<references {" ".join(attrs)}>']
-        for ref in self.references:
-            xml.append(f'  {ref.to_xml()}')
-        for group in self.reference_groups:
-            xml.append(f'  {group.to_xml()}')
-        xml.append('</references>')
         return '\n'.join(xml) 

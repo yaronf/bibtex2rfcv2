@@ -1,6 +1,7 @@
 """Utility functions for BibTeX to RFC conversion."""
 
 import re
+from typing import Optional
 
 def latex_to_unicode(text: str) -> str:
     """Convert LaTeX accents and special characters to Unicode.
@@ -67,3 +68,20 @@ def latex_to_unicode(text: str) -> str:
     # Remove any remaining curly braces
     text = text.replace("{", "").replace("}", "")
     return text 
+
+def extract_ascii(text: str) -> Optional[str]:
+    """Extract ASCII version of text by removing accents and special characters.
+    
+    Args:
+        text: The text to convert to ASCII.
+        
+    Returns:
+        The ASCII version of the text, or None if the text is already ASCII.
+    """
+    if not text:
+        return None
+    # Convert to Unicode first to handle LaTeX accents
+    unicode_text = latex_to_unicode(text)
+    # Then convert to ASCII by removing non-ASCII characters
+    ascii_text = ''.join(c for c in unicode_text if ord(c) < 128)
+    return ascii_text if ascii_text != unicode_text else None 
